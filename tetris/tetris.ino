@@ -12,10 +12,10 @@ const int BUZZER_PIN = 3;
 
 // ゲームフィールド設定
 const int FIELD_WIDTH = 10;
-const int FIELD_HEIGHT = 16;
-const int BLOCK_SIZE = 3;
+const int FIELD_HEIGHT = 20;
+const int BLOCK_SIZE = 6;
 const int FIELD_OFFSET_X = 2;
-const int FIELD_OFFSET_Y = 8;
+const int FIELD_OFFSET_Y = 2;
 
 // フィールド (0=空, 1=ブロック)
 byte field[FIELD_HEIGHT][FIELD_WIDTH];
@@ -80,6 +80,9 @@ int currentY = 0;
 int currentRotation = 0;
 byte currentShape[4][4];
 
+// 次のテトロミノ
+int nextType = 0;
+
 // ゲーム状態
 bool gameStarted = false;
 bool gameOver = false;
@@ -90,44 +93,28 @@ int fallDelay = 500;
 unsigned long lastButtonTime = 0;
 const int buttonDelay = 150;
 
-// BGM用
-unsigned long lastNoteTime = 0;
-int currentNote = 0;
-const int noteDelay = 200;  // 各音符の長さ（ミリ秒）
-
-// テトリスのテーマ曲（コロブチカ）のメロディ
-const int melodyLength = 32;
-const int melody[] = {
-  659, 494, 523, 587,  // E D C B
-  523, 494, 440, 440,  // C D A A
-  523, 659, 587, 523,  // C E D C
-  494, 494, 523, 587,  // D D C B
-
-  659, 494, 523, 587,  // E D C B
-  523, 494, 440, 440,  // C D A A
-  523, 659, 587, 523,  // C E D C
-  494, 523, 440, 440   // D C A A
-};
 
 void setup() {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.setRotation(1);  // 画面ぢ90度回転（縦使用）
   pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
   pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
   pinMode(BUZZER_PIN, OUTPUT);
 
   randomSeed(analogRead(0));
+  nextType = random(7);  // 最初の次のブロックを決定
 
   displayTitle();
 }
 
 void displayTitle() {
   display.clearDisplay();
-  display.setTextSize(2);
+  display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(20, 20);
+  display.setCursor(15, 15);
   display.print("Tetris");
   display.setTextSize(1);
-  display.setCursor(10, 50);
+  display.setCursor(5, 40);
   display.print("Press L to start");
   display.display();
 }
@@ -143,31 +130,13 @@ void initGame() {
   score = 0;
   gameOver = false;
   soundPlayed = false;
-  currentNote = 0;
-  lastNoteTime = millis();
   spawnNewTetromino();
 }
 
-void playBGM() {
-  unsigned long currentTime = millis();
-
-  // 次の音符を鳴らすタイミングかチェック
-  if (currentTime - lastNoteTime >= noteDelay) {
-    // 現在の音符を鳴らす
-    tone(BUZZER_PIN, melody[currentNote], noteDelay - 20);
-
-    // 次の音符へ
-    currentNote++;
-    if (currentNote >= melodyLength) {
-      currentNote = 0;  // ループ
-    }
-
-    lastNoteTime = currentTime;
-  }
-}
 
 void spawnNewTetromino() {
-  currentType = random(7);
+  currentType = nextType;  // 次のブロックを現在のブロックにする
+  nextType = random(7);    // 新しい次のブロックを決定
   currentX = 3;
   currentY = 0;
   currentRotation = 0;
@@ -316,6 +285,24 @@ void drawField() {
   }
 }
 
+void drawNextTetromino() {
+  // 右上に次のテトロミノを表示（回転後の座標系で）
+  int previewX = 50;  // 少し右に移動
+  int previewY = 6;   // 少し下に移動
+  int previewSize = 2;
+
+  // 次のテトロミノを描画
+  for (int py = 0; py < 4; py++) {
+    for (int px = 0; px < 4; px++) {
+      if (TETROMINOS[nextType][py][px]) {
+        display.fillRect(previewX + px * previewSize,
+                        previewY + py * previewSize,
+                        previewSize - 1, previewSize - 1, SSD1306_WHITE);
+      }
+    }
+  }
+}
+
 void playGameOverSound() {
   // ゲームオーバー音を鳴らす（1回だけ）
   tone(BUZZER_PIN, 200, 200);  // 低い音
@@ -371,10 +358,10 @@ void loop() {
     // リトライ待ち画面を表示
     display.clearDisplay();
     display.setTextSize(1);
-    display.setCursor(10, 20);
+    display.setCursor(5, 20);
     display.print("Score:");
     display.print(score);
-    display.setCursor(10, 35);
+    display.setCursor(5, 35);
     display.print("Press L to retry");
     display.display();
 
@@ -390,8 +377,6 @@ void loop() {
 
   unsigned long currentTime = millis();
 
-  // BGMを再生
-  playBGM();
 
   // ボタン入力
   if (currentTime - lastButtonTime > buttonDelay) {
@@ -430,15 +415,17 @@ void loop() {
   // 描画
   display.clearDisplay();
 
-  // スコア表示
+  // 左上にスコアを表示（少し下、少し右に）
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.print("S:");
+  display.setCursor(5, 8);
   display.print(score);
 
   // フィールドとテトロミノを描画
   drawField();
+
+  // 次のブロックを表示
+  drawNextTetromino();
 
   display.display();
   delay(10);
