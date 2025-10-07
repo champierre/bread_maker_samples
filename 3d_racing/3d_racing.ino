@@ -38,7 +38,7 @@ bool gameOverDisplayed = false;
 int score = 0;
 unsigned long lastUpdateTime = 0;
 unsigned long lastObstacleTime = 0;
-const int obstacleSpawnDelay = 2000;
+int obstacleSpawnDelay = 2000;  // 初期値（constを削除）
 unsigned long lastButtonTime = 0;
 const int buttonDelay = 100;
 
@@ -73,6 +73,7 @@ void initGame() {
   score = 0;
   gameOver = false;
   gameOverDisplayed = false;
+  obstacleSpawnDelay = 2000;  // 初期値にリセット
 
   // 障害物をクリア
   for (int i = 0; i < MAX_OBSTACLES; i++) {
@@ -163,24 +164,38 @@ bool checkCollision() {
     if (obstacles[i].active) {
       float depth = obstacles[i].z / 100.0;
 
-      // プレイヤーの近くにある障害物のみチェック
-      if (depth > 0.8 && depth <= 1.0) {
-        // プレイヤーのレーン位置を計算
+      // プレイヤーの本当に近くにある障害物のみチェック（非常に狭い範囲）
+      if (depth > 0.95 && depth <= 1.0) {
+        // 障害物の画面上の位置を計算
+        int y = 10 + (int)(depth * 50);
+        int size = 3 + (int)(depth * 5);
+
         int roadWidth = 20 + (int)(depth * 80);
         int leftX = (SCREEN_WIDTH - roadWidth) / 2;
         int laneWidth = roadWidth / 3;
+        int obstacleX = leftX + obstacles[i].laneX * laneWidth + laneWidth / 2;
 
-        // 各レーンの範囲
+        // プレイヤーの車の位置（画面下部）
+        // プレイヤーがどのレーンにいるかを計算
+        int playerLane = -1;
         for (int lane = 0; lane < 3; lane++) {
           int laneLeft = leftX + lane * laneWidth;
           int laneRight = laneLeft + laneWidth;
+          int laneCenter = (laneLeft + laneRight) / 2;
 
-          // プレイヤーがこのレーンにいるか
-          if (playerX >= laneLeft && playerX <= laneRight) {
-            // 障害物も同じレーンにあるか
-            if (obstacles[i].laneX == lane) {
-              return true;  // 衝突！
-            }
+          // プレイヤーの中心がこのレーンの中心付近にあるか（さらに狭い範囲）
+          if (playerX >= laneCenter - laneWidth / 4 && playerX <= laneCenter + laneWidth / 4) {
+            playerLane = lane;
+            break;
+          }
+        }
+
+        // 同じレーンにいる場合のみ衝突
+        if (playerLane == obstacles[i].laneX) {
+          // さらに、X座標が近いかチェック
+          int dx = abs(playerX - obstacleX);
+          if (dx < playerWidth) {
+            return true;
           }
         }
       }
@@ -289,6 +304,11 @@ void loop() {
   if (currentTime - lastObstacleTime > obstacleSpawnDelay) {
     spawnObstacle();
     lastObstacleTime = currentTime;
+
+    // スコアに応じて出現頻度を上げる
+    if (score >= 100 && obstacleSpawnDelay > 800) {
+      obstacleSpawnDelay -= 50;  // 100点ごとに50ms短縮
+    }
   }
 
   // 衝突判定
