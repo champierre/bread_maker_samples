@@ -34,6 +34,7 @@ Obstacle obstacles[MAX_OBSTACLES];
 // ゲーム状態
 bool gameStarted = false;
 bool gameOver = false;
+bool gameOverDisplayed = false;
 int score = 0;
 unsigned long lastUpdateTime = 0;
 unsigned long lastObstacleTime = 0;
@@ -71,6 +72,7 @@ void initGame() {
   roadSpeed = 2.0;
   score = 0;
   gameOver = false;
+  gameOverDisplayed = false;
 
   // 障害物をクリア
   for (int i = 0; i < MAX_OBSTACLES; i++) {
@@ -187,7 +189,7 @@ bool checkCollision() {
   return false;
 }
 
-void displayGameOver() {
+void showGameOverScreen() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
@@ -200,11 +202,15 @@ void displayGameOver() {
   display.print("Score:");
   display.print(score);
   display.display();
-  delay(2000);
+}
 
+void showRetryScreen() {
   display.clearDisplay();
   display.setTextSize(1);
-  display.setCursor(10, 28);
+  display.setCursor(30, 20);
+  display.print("Score:");
+  display.print(score);
+  display.setCursor(10, 40);
   display.print("Press L to retry");
   display.display();
 }
@@ -225,7 +231,17 @@ void loop() {
 
   // ゲームオーバー
   if (gameOver) {
-    displayGameOver();
+    // 最初に1回だけゲームオーバー画面を表示
+    if (!gameOverDisplayed) {
+      showGameOverScreen();
+      delay(2000);
+      gameOverDisplayed = true;
+    }
+
+    // リトライ待ち画面を表示
+    showRetryScreen();
+
+    // ボタン入力チェック
     if (digitalRead(LEFT_BUTTON_PIN) == LOW) {
       delay(50);
       while (digitalRead(LEFT_BUTTON_PIN) == LOW) {

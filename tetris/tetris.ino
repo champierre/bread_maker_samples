@@ -90,6 +90,25 @@ int fallDelay = 500;
 unsigned long lastButtonTime = 0;
 const int buttonDelay = 150;
 
+// BGM用
+unsigned long lastNoteTime = 0;
+int currentNote = 0;
+const int noteDelay = 200;  // 各音符の長さ（ミリ秒）
+
+// テトリスのテーマ曲（コロブチカ）のメロディ
+const int melodyLength = 32;
+const int melody[] = {
+  659, 494, 523, 587,  // E D C B
+  523, 494, 440, 440,  // C D A A
+  523, 659, 587, 523,  // C E D C
+  494, 494, 523, 587,  // D D C B
+
+  659, 494, 523, 587,  // E D C B
+  523, 494, 440, 440,  // C D A A
+  523, 659, 587, 523,  // C E D C
+  494, 523, 440, 440   // D C A A
+};
+
 void setup() {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
@@ -124,7 +143,27 @@ void initGame() {
   score = 0;
   gameOver = false;
   soundPlayed = false;
+  currentNote = 0;
+  lastNoteTime = millis();
   spawnNewTetromino();
+}
+
+void playBGM() {
+  unsigned long currentTime = millis();
+
+  // 次の音符を鳴らすタイミングかチェック
+  if (currentTime - lastNoteTime >= noteDelay) {
+    // 現在の音符を鳴らす
+    tone(BUZZER_PIN, melody[currentNote], noteDelay - 20);
+
+    // 次の音符へ
+    currentNote++;
+    if (currentNote >= melodyLength) {
+      currentNote = 0;  // ループ
+    }
+
+    lastNoteTime = currentTime;
+  }
 }
 
 void spawnNewTetromino() {
@@ -319,6 +358,9 @@ void loop() {
 
   // ゲームオーバー
   if (gameOver) {
+    // BGMを止める
+    noTone(BUZZER_PIN);
+
     // 音を1回だけ鳴らす
     if (!soundPlayed) {
       playGameOverSound();
@@ -347,6 +389,9 @@ void loop() {
   }
 
   unsigned long currentTime = millis();
+
+  // BGMを再生
+  playBGM();
 
   // ボタン入力
   if (currentTime - lastButtonTime > buttonDelay) {
