@@ -1,6 +1,6 @@
-# Arduino Samples
+# BREAD MAKER Samples
 
-このリポジトリには Arduino Uno 用のゲームサンプルが含まれています。
+このリポジトリのサンプルは、Maker Faire Tokyo 2025 のワークショップで作成したブレッドボード上で動く簡単ゲーム機 BREAD MAKER(Yugi Tech Lab) で動作します。システム構成、材料、作り方の詳細は https://protopedia.net/prototype/7594 を参照してください。
 
 ## ハードウェア要件
 
