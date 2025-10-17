@@ -248,11 +248,6 @@ void compactInvaders() {
     invaders[i].number = 0;
     invaders[i].isUFO = false;
   }
-
-  // X座標を再計算（右詰めで表示するため、位置に基づいてX座標を設定）
-  for (int i = 0; i < writeIdx; i++) {
-    invaders[i].x = 60 + (invaders[i].position - 1) * 12;
-  }
 }
 
 // 発射処理
